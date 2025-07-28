@@ -1,10 +1,18 @@
 import base64
 import json
+import time
 from BPE import BPE_Train
 
+
+start_time = time.time()
+
 vocab, merges = BPE_Train(
-    "../data/TinyStoriesV2-GPT4-valid.txt", 10000, ["<|endoftext|>"]
+    "../data/TinyStoriesV2-GPT4-train.txt", 10000, ["<|endoftext|>"]
 )
+
+end_time = time.time()
+
+print(f"BPE train cost time {end_time-start_time}s")
 
 # 序列化字典到第一个文件
 m = 0
@@ -13,7 +21,7 @@ for k, v in vocab.items():
     if len(v) > m:
         m = len(v)
         vo = str(v)
-print(vo)
+print(f"longest token: {vo}")
 
 
 with open("vocab", "w") as f:
