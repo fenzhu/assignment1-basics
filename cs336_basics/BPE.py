@@ -18,8 +18,7 @@ import multiprocessing
 import time
 from tqdm import tqdm
 
-
-from worker_logic import find_chunk_boundaries, init_worker, worker
+from cs336_basics.worker_logic import find_chunk_boundaries, init_worker, worker
 
 
 def Merge(
@@ -73,6 +72,8 @@ def Merge(
 def BPE_Train(
     input_path: str, vocab_size: int, special_tokens: list[str]
 ) -> tuple[dict[int, bytes], list[tuple[bytes, bytes]]]:
+
+    train_start_time = time.time()
 
     vocab: dict[int, bytes] = {}
     merges: list[tuple[bytes, bytes]]
@@ -132,6 +133,8 @@ def BPE_Train(
         vocab[i] = a + b
         i += 1
 
+    train_end_time = time.time()
+    print(f"BPE train finished in {train_end_time- start_time:.2f}s")
     return (vocab, merges)
 
 
