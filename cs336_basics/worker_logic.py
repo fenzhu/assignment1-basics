@@ -37,16 +37,15 @@ def BPE_Split(text: str, special_tokens: list[str]) -> list[str]:
     return allWords
 
 
-def BPE_Split_Reserve(
-    text: str, special_tokens: list[str], reverveSpecial: bool = False
-) -> list[str]:
+def BPE_Split_Reserve(text: str, special_tokens: list[str]) -> list[str]:
     sorted_special_tokens = sorted(special_tokens, key=len, reverse=True)
     pattern = "|".join([re.escape(special) for special in sorted_special_tokens])
     pattern = f"({pattern})"
 
     allWords = []
 
-    parts = re.split(pattern, text)
+    parts = re.split(pattern, text) if len(special_tokens) > 0 else [text]
+
     for i in range(len(parts)):
         part = parts[i]
         if i % 2 == 0:
