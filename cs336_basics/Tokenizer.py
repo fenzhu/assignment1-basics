@@ -44,11 +44,16 @@ class CSTokenizer:
         key = [bytes([b]) for b in word.encode("utf-8")]
 
         for ma, mb in self.merges:
-            index = [i for i in range(len(key))]
-            for i, a, b in zip(index, key, key[1:]):
-                if a == ma and b == mb:
-                    key = key[:i] + [a + b] + key[i + 2 :]
-                    break
+            newKey = []
+            i = 0
+            while i < len(key):
+                if i + 1 < len(key) and key[i] == ma and key[i + 1] == mb:
+                    newKey.append(ma + mb)
+                    i += 2
+                else:
+                    newKey.append(key[i])
+                    i += 1
+            key = newKey
 
         return key
 
