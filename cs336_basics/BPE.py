@@ -14,8 +14,12 @@ def BPE_Example(str):
 
 
 from collections import defaultdict
-import re
-import regex
+import multiprocessing
+import time
+from tqdm import tqdm
+
+
+from worker_logic import find_chunk_boundaries, init_worker, worker
 
 
 def Merge(
@@ -66,37 +70,6 @@ def Merge(
 # BPE_Example(str)
 
 
-def BPE_Pretoken(text: str, special_tokens: list[str]) -> dict[tuple[bytes], int]:
-    """
-    Pretokenize the input text into a dictionary of byte tuples and their frequencies.
-    """
-    fileContent = text
-    parts = re.split(
-        "|".join([re.escape(special) for special in special_tokens]),
-        fileContent,
-    )
-
-    PAT = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
-
-    allWords = []
-    for part in parts:
-        # 使用extend扁平化合并
-        allWords.extend(regex.findall(PAT, part))
-
-    wordCount = defaultdict(int)
-    for word in allWords:
-
-        # 单个字符可能由多个字节组成，例如emoji😃
-        # 如果先拆分字符再转bytes，会导致初始key中存在包含多个字节的元素
-        # key = tuple([c.encode("utf-8") for c in word])
-
-        # 先转为bytes，再将每个字节都转为bytes对象，确保初始key的每个元素都是单个字节
-        key = tuple(bytes([b]) for b in word.encode("utf-8"))
-        wordCount[key] += 1
-
-    return wordCount
-
-
 def BPE_Train(
     input_path: str, vocab_size: int, special_tokens: list[str]
 ) -> tuple[dict[int, bytes], list[tuple[bytes, bytes]]]:
@@ -104,11 +77,46 @@ def BPE_Train(
     vocab: dict[int, bytes] = {}
     merges: list[tuple[bytes, bytes]]
 
-    fileContent = ""
-    with open(input_path, "r", encoding="utf-8") as file:
-        fileContent = file.read()
+    num_processes = multiprocessing.cpu_count()
+    print(f"Using {num_processes} processes")
 
-    wordCount = BPE_Pretoken(fileContent, special_tokens)
+    with open(input_path, "rb") as f_main:
+        boundaries = find_chunk_boundaries(
+            f_main,
+            num_processes,
+            [special_token.encode("utf-8") for special_token in special_tokens],
+        )
+
+    tasks = []
+    for start, end in zip(boundaries[:-1], boundaries[1:]):
+        tasks.append((start, end, special_tokens))
+
+    results = []
+
+    start_time = time.time()
+
+    with multiprocessing.Pool(
+        processes=num_processes, initializer=init_worker, initargs=(input_path,)
+    ) as pool:
+        async_results = [pool.apply_async(worker, t) for t in tasks]
+        with tqdm(total=len(tasks), desc="Preprocessing chunks") as pbar:
+            for res in async_results:
+                results.append(res.get())
+                pbar.update(1)
+
+    end_time = time.time()
+    print(f"Pre-tokenization finished in {end_time - start_time:.2f}s")
+
+    wordCount = defaultdict(int)
+    for wc in results:
+        for k, v in wc.items():
+            wordCount[k] += v
+
+    # fileContent = ""
+    # with open(input_path, "r", encoding="utf-8") as file:
+    #     fileContent = file.read()
+
+    # wordCount = BPE_Pretoken(fileContent, special_tokens)
 
     mergeNum = max(0, vocab_size - 256 - len(special_tokens))
     wc, merges = Merge(wordCount, mergeNum)
@@ -120,11 +128,9 @@ def BPE_Train(
         vocab[i] = token.encode("utf-8")
         i += 1
 
-    # print(merges)
     for a, b in merges:
         vocab[i] = a + b
         i += 1
-    # print(vocab)
 
     return (vocab, merges)
 
