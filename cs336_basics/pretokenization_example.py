@@ -1,4 +1,5 @@
 import os
+import time
 from typing import BinaryIO
 
 
@@ -11,7 +12,9 @@ def find_chunk_boundaries(
     Chunk the file into parts that can be counted independently.
     May return fewer chunks if the boundaries end up overlapping.
     """
-    assert isinstance(split_special_token, bytes), "Must represent special token as a bytestring"
+    assert isinstance(
+        split_special_token, bytes
+    ), "Must represent special token as a bytestring"
 
     # Get total file size in bytes
     file.seek(0, os.SEEK_END)
@@ -49,14 +52,39 @@ def find_chunk_boundaries(
     return sorted(set(chunk_boundaries))
 
 
+from concurrent.futures import ThreadPoolExecutor
+from BPE import BPE_Pretoken
+import multiprocessing
+
+
+def worker(start, end, special_token):
+    f.seek(start)
+    chunk = f.read(end - start).decode("utf-8", errors="ignore")
+    return BPE_Pretoken(chunk, [special_token])
+
+
 ## Usage
-with open(..., "rb") as f:
-    num_processes = 4
+# with open("../data/TinyStoriesV2-GPT4-train.txt", "rb") as f:
+with open("../data/TinyStoriesV2-GPT4-valid.txt", "rb") as f:
+    # with open("../data/tinystories_sample_5M.txt", "rb") as f:
+    num_processes = multiprocessing.cpu_count()
+    print(f"Using {num_processes} processes")
+
     boundaries = find_chunk_boundaries(f, num_processes, b"<|endoftext|>")
 
     # The following is a serial implementation, but you can parallelize this
     # by sending each start/end pair to a set of processes.
+    start_time = time.time()
+    s = []
+    e = []
     for start, end in zip(boundaries[:-1], boundaries[1:]):
-        f.seek(start)
-        chunk = f.read(end - start).decode("utf-8", errors="ignore")
+        s.append(start)
+        e.append(end)
         # Run pre-tokenization on your chunk and store the counts for each pre-token
+    args = ["<|endoftext|>"] * num_processes
+
+    with multiprocessing.Pool(processes=num_processes) as pool:
+        results = pool.starmap(worker, zip(s, e, args))
+
+    end_time = time.time()
+    print(f"pretoken cost time {end_time-start_time}s")

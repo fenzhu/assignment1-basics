@@ -66,17 +66,11 @@ def Merge(
 # BPE_Example(str)
 
 
-def BPE_Train(
-    input_path: str, vocab_size: int, special_tokens: list[str]
-) -> tuple[dict[int, bytes], list[tuple[bytes, bytes]]]:
-
-    vocab: dict[int, bytes] = {}
-    merges: list[tuple[bytes, bytes]]
-
-    fileContent = ""
-    with open(input_path, "r", encoding="utf-8") as file:
-        fileContent = file.read()
-
+def BPE_Pretoken(text: str, special_tokens: list[str]) -> dict[tuple[bytes], int]:
+    """
+    Pretokenize the input text into a dictionary of byte tuples and their frequencies.
+    """
+    fileContent = text
     parts = re.split(
         "|".join([re.escape(special) for special in special_tokens]),
         fileContent,
@@ -99,6 +93,22 @@ def BPE_Train(
         # 先转为bytes，再将每个字节都转为bytes对象，确保初始key的每个元素都是单个字节
         key = tuple(bytes([b]) for b in word.encode("utf-8"))
         wordCount[key] += 1
+
+    return wordCount
+
+
+def BPE_Train(
+    input_path: str, vocab_size: int, special_tokens: list[str]
+) -> tuple[dict[int, bytes], list[tuple[bytes, bytes]]]:
+
+    vocab: dict[int, bytes] = {}
+    merges: list[tuple[bytes, bytes]]
+
+    fileContent = ""
+    with open(input_path, "r", encoding="utf-8") as file:
+        fileContent = file.read()
+
+    wordCount = BPE_Pretoken(fileContent, special_tokens)
 
     mergeNum = max(0, vocab_size - 256 - len(special_tokens))
     wc, merges = Merge(wordCount, mergeNum)
