@@ -7,7 +7,7 @@ from BPE import BPE_Train
 start_time = time.time()
 
 vocab, merges = BPE_Train(
-    "../data/TinyStoriesV2-GPT4-train.txt", 10000, ["<|endoftext|>"]
+    "../data/TinyStoriesV2-GPT4-valid.txt", 10000, ["<|endoftext|>"]
 )
 
 end_time = time.time()
