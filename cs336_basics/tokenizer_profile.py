@@ -9,9 +9,13 @@ vocab, merges = BPE_Train("../data/tinystories_sample_5M.txt", 10000, special_to
 # print(vocab)
 # print(merges)
 
-tokenizer = CSTokenizer(vocab, merges)
+tokenizer = CSTokenizer(vocab, merges, ["<|endoftext|>"])
 
-input = "hello, world! <|endoftext|> This is a test input."
+input = "b <|endoftext|><|endoftext|> a <|endoftext|>"
 tokens = tokenizer.encode(input)
+
 print(f"Encoded tokens for '{input}': {tokens}")
+
+print([tokenizer.decode([x]) for x in tokens])
+
 print(tokenizer.decode(tokens))

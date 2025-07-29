@@ -26,16 +26,33 @@ PAT = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s
 
 
 def BPE_Split(text: str, special_tokens: list[str]) -> list[str]:
-
-    parts = re.split(
-        "|".join([re.escape(special) for special in special_tokens]),
-        text,
-    )
+    pattern = "|".join([re.escape(special) for special in special_tokens])
+    parts = re.split(pattern, text)
 
     allWords = []
     for part in parts:
         # 使用extend扁平化合并
         allWords.extend(regex.findall(PAT, part))
+
+    return allWords
+
+
+def BPE_Split_Reserve(
+    text: str, special_tokens: list[str], reverveSpecial: bool = False
+) -> list[str]:
+    pattern = "|".join([re.escape(special) for special in special_tokens])
+    pattern = f"({pattern})"
+
+    allWords = []
+
+    parts = re.split(pattern, text)
+    for i in range(len(parts)):
+        part = parts[i]
+        if i % 2 == 0:
+            # 使用extend扁平化合并
+            allWords.extend(regex.findall(PAT, part))
+        else:
+            allWords.append(part)
 
     return allWords
 

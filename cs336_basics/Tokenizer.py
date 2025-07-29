@@ -1,6 +1,6 @@
 from typing import Iterable, Iterator
 
-from cs336_basics.worker_logic import BPE_Split
+from cs336_basics.worker_logic import BPE_Split_Reserve
 
 
 class CSTokenizer:
@@ -30,8 +30,7 @@ class CSTokenizer:
         """
         tokens = []
 
-        print(self.special_tokens)
-        words = BPE_Split(text, self.special_tokens)
+        words = BPE_Split_Reserve(text, self.special_tokens)
         for word in words:
             byte_list = self.__merge_word(word)
             tokens.extend([self.reverse_vocab[b] for b in byte_list])
@@ -39,6 +38,9 @@ class CSTokenizer:
         return tokens
 
     def __merge_word(self, word: str) -> list[bytes]:
+        if word in self.special_tokens:
+            return [word.encode("utf-8")]
+
         key = [bytes([b]) for b in word.encode("utf-8")]
 
         for ma, mb in self.merges:
@@ -51,10 +53,10 @@ class CSTokenizer:
         return key
 
     def decode(self, ids: list[int]) -> str:
-        str_list = []
+        byte_list = []
         for token in ids:
-            str_list.append(self.vocab[token].decode("utf-8", errors="replace"))
-        return "".join(str_list)
+            byte_list.append(self.vocab[token])
+        return b"".join(byte_list).decode("utf-8", errors="replace")
 
     # 注意大文件的情况, 分块处理
     def encode_iterable(self, iterable: Iterable[str]) -> Iterator[int]:
