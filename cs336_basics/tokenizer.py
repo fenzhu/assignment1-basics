@@ -81,11 +81,16 @@ class BPETokenizer:
         for i, match in enumerate(pretokens):
             # word = match.group()
             word = match
+            byteWord = word.encode("utf-8")
             if word in self.special_list:
-                indices.append([256])
+                for k, w in self.vocab.items():
+                    if w == byteWord:
+                        indices.append([k])
+                        break
+                # indices.append([256])
                 continue
 
-            index = list(map(int, word.encode("utf-8")))
+            index = list(map(int, byteWord))
             indices.append(index)
             for a, b in zip(index, index[1:]):
                 pairCount[(a, b)] += 1
