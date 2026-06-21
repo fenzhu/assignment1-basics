@@ -4,7 +4,7 @@ from collections import defaultdict
 import multiprocessing
 import time
 
-a = re.findall(PAT, "some text that'll  pre-tokenize")
+# a = re.findall(PAT, "some text that'll  pre-tokenize")
 
 
 def process_chunk(chunk):
@@ -78,7 +78,7 @@ class BPETokenizer:
         indices = []
         pairCount = defaultdict(int)
         pairIndices = defaultdict(set)
-        for match in pretokens:
+        for i, match in enumerate(pretokens):
             # word = match.group()
             word = match
             if word in self.special_list:
@@ -89,7 +89,7 @@ class BPETokenizer:
             indices.append(index)
             for a, b in zip(index, index[1:]):
                 pairCount[(a, b)] += 1
-                pairIndices[(a, b)].add(word)
+                pairIndices[(a, b)].add(i)
 
         while len(self.vocab) < self.size:
             indices, pairCount, pairIndices = self.merge(
@@ -111,15 +111,15 @@ class BPETokenizer:
 
         newIndices = []
         s = pairIndices[maxPair].copy()
-        for index in indices:
-            word = b"".join([self.vocab[i] for i in index]).decode("utf-8")
-            if word not in s:
+        for k, index in enumerate(indices):
+            # word = b"".join([self.vocab[i] for i in index]).decode("utf-8")
+            if k not in s:
                 newIndices.append(index)
                 continue
 
             for a, b in zip(index, index[1:]):
                 pairCount[(a, b)] -= 1
-                pairIndices[(a, b)].discard(word)
+                pairIndices[(a, b)].discard(k)
 
             i = 0
             newIndex = []
@@ -133,7 +133,7 @@ class BPETokenizer:
 
             for a, b in zip(newIndex, newIndex[1:]):
                 pairCount[(a, b)] += 1
-                pairIndices[(a, b)].add(word)
+                pairIndices[(a, b)].add(k)
 
             newIndices.append(newIndex)
 
